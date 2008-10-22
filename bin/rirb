@@ -1,0 +1,55 @@
+#!/usr/bin/ruby
+
+require "socket"
+require "optparse"
+require "yaml"
+
+def error(msg)
+  $stderr.puts msg
+  exit 1
+end
+
+def load_rirb(file)
+  h = YAML.load_file(file)
+  case h["type"]
+  when "unix"
+    UNIXSocket.open(h["path"]) {|sock| yield sock }
+  else
+    error("unknown communication type")
+  end
+end
+
+def option(argv)
+  file = nil
+  until argv.empty?
+    arg = argv.shift
+    if arg == "-h"
+      puts "usage: rirb [RIRB_FILE]"
+      exit 0
+    end
+    error("cannot read #{ arg }") unless File.readable?(arg)
+    file = arg
+  end
+  unless file
+    file = Dir.glob("*.rirb").sort.first
+  end
+  file
+end
+
+load_rirb(option(ARGV.dup)) do |sock|
+  loop do
+    ios, = select([sock, $stdin])
+    if ios.include?($stdin)
+      break if $stdin.eof?
+      sock.write($stdin.readpartial(1024))
+      sock.flush
+    end
+    if ios.include?(sock)
+      break if sock.eof?
+      $stdout.write(sock.readpartial(1024))
+      $stdout.flush
+    end
+  end
+end
+
+# vim: syntax=ruby

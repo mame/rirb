@@ -1,0 +1,7 @@
+History.txt
+Manifest.txt
+README.txt
+Rakefile
+bin/rirb
+lib/rirb.rb
+lib/rirb/remote-irb.rb
